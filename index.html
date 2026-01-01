@@ -1,0 +1,2018 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>הממלכה המטורפת - מסך מלא</title>
+<style>
+/* איפוס ועיצוב למסך מלא */
+html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #050505; font-family: 'Segoe UI', sans-serif; color: white; text-align: center; user-select: none; }
+
+#game-container { 
+    width: 100vw; 
+    height: 100vh; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    background: #111; 
+}
+
+canvas { 
+    background: #222; 
+    border: 4px solid gold; 
+    box-shadow: 0 0 60px rgba(255,215,0,0.4); 
+    border-radius: 8px; 
+    cursor: crosshair;
+    /* הגדרות למסך מלא תוך שמירה על פרופורציות */
+    width: 100%;
+    height: 100%;
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain; 
+}
+
+/* ממשק עליון */
+.hud-bar { position: absolute; top: 0; width: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); padding: 15px; font-size: 26px; color: gold;
+font-weight: bold; text-shadow: 2px 2px 0 black; display: flex; justify-content: space-around; z-index: 10; pointer-events: none; }
+
+/* תיבת הוראות בתוך משחק */
+#game-info-box { position: absolute; top: 80px; right: 20px; width: 250px; background: rgba(0, 0, 0, 0.8); border: 2px solid cyan;
+border-radius: 10px; padding: 15px; color: white; font-size: 16px; text-align: right; display: none; z-index: 15; pointer-events: none;
+box-shadow: 0 0 15px cyan; }
+#game-info-title { color: cyan; font-weight: bold; font-size: 20px; margin-bottom: 5px; display: block; }
+
+/* כפתור יציאה כללי */
+#exit-game-btn { position: absolute; top: 80px; left: 30px; background: linear-gradient(to bottom, #ff416c, #ff4b2b); color: white; border: 2px solid white;
+padding: 10px 25px; font-weight: bold; border-radius: 50px; cursor: pointer; display: none; z-index: 2000; box-shadow: 0 5px 15px rgba(255,0,0,0.4); pointer-events: auto;
+}
+#exit-game-btn:hover { transform: scale(1.1); }
+
+/* כפתור יציאה מהקפה */
+#exit-cafe-btn { position: absolute; bottom: 30px; left: 30px; background: #e74c3c; color: white; border: 2px solid white; padding: 10px 20px;
+font-weight: bold; border-radius: 15px; cursor: pointer; display: none; z-index: 2000; box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: auto; }
+#exit-cafe-btn:hover { transform: scale(1.1); background: #c0392b; }
+/* כפתור אינטראקציה (אנטר) */
+#enter-hint { position: absolute; color: gold; font-weight: bold; font-size: 20px; text-shadow: 0 0 5px black; pointer-events: none; display: none;
+z-index: 1500; animation: bounce 1s infinite; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* מסכים */
+.screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #111; display: none; flex-direction: column; justify-content: center;
+align-items: center; z-index: 100; }
+.active { display: flex; }
+
+/* אנימציית אורות למסך הפתיחה */
+@keyframes lightShow {
+0% { background-position: 0% 50%; }
+50% { background-position: 100% 50%; }
+100% { background-position: 0% 50%; }
+}
+@keyframes glowText {
+0% { text-shadow: 0 0 10px gold, 0 0 20px orange; }
+50% { text-shadow: 0 0 30px red, 0 0 40px purple, 0 0 50px white; }
+100% { text-shadow: 0 0 10px gold, 0 0 20px orange; }
+}
+#scr-start {
+/* רקע צבעוני זז */
+background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+background-size: 400% 400%;
+animation: lightShow 10s ease infinite;
+}
+
+#scr-start h1 {
+font-size: 90px;
+color: white;
+margin-bottom: 10px;
+animation: glowText 2s infinite alternate; /* טקסט זוהר */
+}
+/* הוראות פתיחה */
+.intro-box {
+    background: rgba(0,0,0,0.7);
+    border: 3px solid gold;
+    border-radius: 20px;
+    padding: 20px;
+    max-width: 600px;
+    text-align: center;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+.intro-box h3 { color: gold; margin-top: 0; font-size: 28px; }
+.intro-box p { font-size: 18px; line-height: 1.6; }
+
+.btn { background: gold; color: black; border: 2px solid white; padding: 15px 40px; font-size: 24px; font-weight: bold; cursor: pointer;
+margin: 10px; border-radius: 10px; transition: 0.2s; box-shadow: 0 0 15px white; }
+.btn:hover { transform: scale(1.1); background: white; box-shadow: 0 0 30px gold; }
+.btn-blue { background: #3498db; color: white; }
+
+/* צ'אט */
+#chat-input { position: absolute; bottom: 20px; width: 400px; padding: 12px; font-size: 18px; z-index: 20; border-radius: 20px; border: none; text-align: center;
+pointer-events: auto; }
+#chat-bubble { position: absolute; background: white; color: black; padding: 8px 20px; border-radius: 20px; display: none; font-weight: bold; font-size: 16px;
+pointer-events: none; white-space: nowrap; box-shadow: 0 5px 10px rgba(0,0,0,0.3); }
+
+/* הודעות צפות */
+#toast { position: absolute; bottom: 100px; background: rgba(0,0,0,0.8); color: #00ff00; padding: 15px 40px; border-radius: 50px; border: 2px solid #00ff00;
+font-size: 24px; font-weight: bold; display: none; animation: pop 0.5s forwards; z-index: 3000; }
+@keyframes pop { 0% { opacity: 0; bottom: 80px; transform: scale(0.5); } 100% { opacity: 1; bottom: 120px; transform: scale(1); } }
+
+/* חלון טריוויה */
+.modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 20, 0.95); border: 4px solid gold;
+border-radius: 15px; padding: 40px; display: none; flex-direction: column; align-items: center; z-index: 2000; min-width: 500px; }
+.trivia-btn { width: 100%; margin: 10px 0; padding: 15px; background: #333; color: white; border: 1px solid white; cursor: pointer;
+font-size: 18px; border-radius: 10px; }
+.trivia-btn:hover { background: gold; color: black; }
+
+/* בקרת צבעים */
+.color-dot { width: 30px; height: 30px; border-radius: 50%; display: inline-block; cursor: pointer; border: 2px solid white; margin: 5px; }
+.color-dot:hover { transform: scale(1.2); }
+#damage-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: red; opacity: 0; pointer-events: none; z-index: 500;
+transition: opacity 0.1s; }
+/* סגנונות חדשים לחדר האופנה */
+.fashion-container { display: flex; gap: 30px; align-items: flex-start; }
+.fashion-controls { display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto; padding-right: 10px; }
+.control-category { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; text-align: right; width: 250px; }
+.cat-title { font-weight: bold; color: gold; margin-bottom: 5px; cursor: pointer; border-bottom: 1px solid #555; padding-bottom: 5px; }
+.palette-grid { display: none; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.palette-grid.show { display: flex; }
+.p-color { width: 25px; height: 25px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+.p-color:hover { border-color: white; transform: scale(1.2); }
+.style-btn { background: #444; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 5px; margin-top: 5px; width: 100%; }
+.style-btn:hover { background: #666; }
+/* סגנונות לחדר הציור */
+#paint-ui { position: absolute; top: 50px; right: 50px; display: none; flex-direction: column; gap: 8px; max-height: 85vh; overflow-y: auto; padding: 10px;
+background: rgba(0,0,0,0.5); border-radius: 10px; }
+.paint-tool-btn { background: white; color: black; border: 2px solid black; padding: 8px; font-weight: bold; cursor: pointer; border-radius: 5px; text-align: right;
+font-size: 14px; }
+.paint-tool-btn:hover { background: gold; }
+.paint-section-title { color: gold; font-weight: bold; margin-top: 10px; font-size: 16px; border-bottom: 1px solid gray; }
+input[type=range] { width: 100%; }
+.undo-redo-container { display: flex; gap: 5px; }
+.undo-redo-btn { flex: 1; background: #ddd; border: 1px solid #999; cursor: pointer; padding: 5px; border-radius: 4px; font-weight: bold; }
+
+/* כפתור סגירת חנות */
+#close-shop-btn { position: absolute; bottom: 50px; right: 50px; background: red; color: white; padding: 15px 30px; font-size: 20px;
+border: 2px solid white; cursor: pointer; display: none; z-index: 2500; }
+
+/* כפתור מוזיקה */
+#music-toggle { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 30px; cursor: pointer; z-index: 5000;
+filter: drop-shadow(0 0 5px black); }
+</style>
+</head>
+<body>
+<audio id="bg-music" loop>
+<source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=fun-life-112188.mp3" type="audio/mpeg">
+</audio>
+<div id="game-container">
+<button id="music-toggle" onclick="toggleMusic()"> 🔊 </button>
+<div id="damage-flash"></div>
+<div class="hud-bar">
+<span>  💰  <span id="ui-mon">500</span></span>
+<span>  🏆  <span id="ui-tro">0</span></span>
+<span>  🆙  דרגה: <span id="ui-rank-name" style="color:cyan;">מתחיל</span> (<span id="ui-rank">1</span>)</span>
+</div>
+
+<div id="game-info-box">
+<span id="game-info-title">הוראות</span>
+<span id="game-info-text"></span>
+</div>
+
+<button id="exit-game-btn" onclick="exitGame()"> ❌   יציאה   לארמון </button>
+<button id="close-shop-btn" onclick="exitShop()">  🚪   צא   מהחנות </button>
+<button id="exit-cafe-btn" onclick="exitCafe()"> 🚪   צא   לעיר </button>
+
+<div id="paint-ui">
+<div style="color: white; font-size: 24px; font-weight: bold; margin-bottom: 5px; text-align: center;"> 🎨 </div>
+<div class="paint-section-title">פעולות</div>
+<div class="undo-redo-container">
+<button class="undo-redo-btn" onclick="undoPaint()"> ↩️   אחורה </button>
+<button class="undo-redo-btn" onclick="redoPaint()"> ↪️   קדימה </button>
+</div>
+<div class="paint-section-title">עובי מכחול/מחק</div>
+<input type="range" id="brushSize" min="1" max="50" value="5" oninput="updateBrushSize(this.value)">
+<div id="brushSizeVal" style="color:white; text-align:center;">5</div>
+<div class="paint-section-title">צבעים</div>
+<button class="paint-tool-btn" onclick="setPaintColor('black')"> ⚫   שחור </button>
+<button class="paint-tool-btn" onclick="setPaintColor('red')"> 🔴   אדום </button>
+<button class="paint-tool-btn" onclick="setPaintColor('blue')"> 🔵   כחול </button>
+<button class="paint-tool-btn" onclick="setPaintColor('green')"> 🟢   ירוק </button>
+<button class="paint-tool-btn" onclick="setPaintColor('yellow')"> 🟡   צהוב </button>
+<button class="paint-tool-btn" onclick="setPaintColor('purple')"> 🟣   סגול </button>
+<button class="paint-tool-btn" onclick="setPaintColor('orange')"> 🟠   כתום </button>
+<div class="paint-section-title">כלים</div>
+<button class="paint-tool-btn" onclick="setPaintColor('white')"> ⚪   מחק </button>
+<div class="paint-section-title">תבניות</div>
+<button class="paint-tool-btn" onclick="loadTemplate('flower')"> 🌸   פרח   משופר </button>
+<button class="paint-tool-btn" onclick="loadTemplate('heart')"> ❤️   לב </button>
+<button class="paint-tool-btn" onclick="loadTemplate('star')"> ⭐   כוכב </button>
+<button class="paint-tool-btn" onclick="loadTemplate('house')"> 🏠   בית </button>
+<button class="paint-tool-btn" onclick="loadTemplate('clear')"> 📄   דף   נקי </button>
+</div>
+<div id="enter-hint">לחץ ENTER</div>
+<div id="toast">הודעה!</div>
+<div id="chat-bubble"></div>
+<input type="text" id="chat-input" placeholder="דבר כאן..." onkeydown="if(event.key==='Enter') sendChat()">
+<canvas id="gameCanvas" width="900" height="600" tabindex="1"></canvas>
+
+<div id="scr-start" class="screen active">
+<h1>הממלכה המטורפת</h1>
+<h2 style="color: #fff; text-shadow: 0 0 10px black;">הגרסה המושלמת - מסך מלא!</h2>
+
+<div class="intro-box">
+    <h3>👑 ברוכים הבאים לממלכה!</h3>
+    <p>
+        המטרה שלכם: להפוך ל<b>"מלך העולם"</b>! (דרגה 20)<br>
+        🎮 שחקו במשחקים בארמון כדי להרוויח כסף.<br>
+        👗 קנו בגדים, מכוניות וחיות מחמד בקניון.<br>
+        🎤 <b>בבית הקפה:</b> הזמינו חברים (מקש F), דברו איתם (Enter) ושירו קריוקי (מקש K)!<br>
+        השתמשו בחצים לזוז וב-Space לפעולות.
+    </p>
+</div>
+
+<button class="btn" style="font-size: 30px; padding: 20px 60px;" onclick="startGame()">  ▶   התחל   משחק  </button>
+</div>
+
+<div id="scr-char" class="screen">
+<h1>בחר את הגיבור שלך</h1>
+<div style="display: flex; gap: 40px;">
+<div onclick="setChar('בן')" style="cursor: pointer; transform: scale(1.5); margin: 40px;">
+<div style="font-size:80px; text-shadow: 0 0 20px blue;">  👦  </div>
+<button class="btn btn-blue">בן</button>
+</div>
+<div onclick="setChar('בת')" style="cursor: pointer; transform: scale(1.5); margin: 40px;">
+<div style="font-size:80px; text-shadow: 0 0 20px pink;">  👧  </div>
+<button class="btn" style="background:#ff69b4; color:white;">בת</button>
+</div>
+</div>
+<div style="color: white; margin-top: 20px;">
+צבע עור: <input type="color" id="skinColor" value="#ffe0bd">
+שיער: <input type="color" id="hairColor" value="#4a2c2c">
+</div>
+<button class="btn" style="margin-top: 40px; background: #2ecc71;" onclick="enterGame()">  🚀   כנס   לעיר  </button>
+</div>
+
+<div id="modal-trivia" class="modal">
+<h2 style="color:gold;">  🧠   אתגר   הטריוויה   הגדול </h2>
+<div style="color: #aaa; margin-bottom: 10px;">רצף נוכחי: <span id="triv-streak" style="color:white; font-weight:bold;">0</span>/8</div>
+<h3 id="triv-q" style="font-size: 24px; margin-bottom: 20px;">שאלה...</h3>
+<div id="triv-ans" style="width: 100%;"></div>
+<button class="btn" style="background:red; color:white; margin-top: 20px;" onclick="closeTrivia()">וותר וצא</button>
+</div>
+<div id="scr-fashion" class="screen" style="background: #202020;">
+<h2 style="color: #e056fd; font-size: 40px; margin-bottom: 20px;"> ✨   סטודיו   האופנה   ✨  </h2>
+<div class="fashion-container">
+<div style="background: white; padding: 20px; border-radius: 20px; box-shadow: 0 0 30px rgba(224, 86, 253, 0.3);">
+<canvas id="fashionCanvas" width="250" height="350"></canvas>
+<button class="btn" style="background: #e056fd; color: white; width: 100%; margin: 20px 0 0 0; padding: 10px;"
+onclick="runFashionShow()"> 💃   לתצוגה ! </button>
+<button class="btn" style="background: #555; color: white; width: 100%; margin: 10px 0 0 0; padding: 10px; font-size: 18px;" onclick="exitFashion()">שמור וצא</button>
+</div>
+<div class="fashion-controls">
+<div class="control-category">
+<div class="cat-title" onclick="togglePalette('shirt-pal')"> 👕   חולצה   ▼ </div>
+<div id="shirt-pal" class="palette-grid"></div>
+</div>
+<div class="control-category">
+<div class="cat-title" onclick="togglePalette('pants-pal')"> 👖   מכנסיים   ▼ </div>
+<div id="pants-pal" class="palette-grid"></div>
+</div>
+<div class="control-category">
+<div class="cat-title"> 💇   סוג   שיער </div>
+<button class="style-btn" onclick="changeHairType()">החלף סגנון שיער</button>
+</div>
+<div class="control-category">
+<div class="cat-title" onclick="togglePalette('hair-pal')"> 🎨   צבע   שיער   ▼ </div>
+<div id="hair-pal" class="palette-grid"></div>
+</div>
+<div class="control-category">
+<div class="cat-title" onclick="togglePalette('blush-pal')"> 😊   סומק   ▼ </div>
+<div id="blush-pal" class="palette-grid"></div>
+</div>
+<div class="control-category">
+<div class="cat-title" onclick="togglePalette('lips-pal')"> 💄   אודם   ▼ </div>
+<div id="lips-pal" class="palette-grid"></div>
+</div>
+<div class="control-category">
+<div class="cat-title" onclick="togglePalette('eyes-pal')"> 👁️   צלליות   ▼ </div>
+<div id="eyes-pal" class="palette-grid"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<img id="img-cafe" src="image_71e209.jpg" style="display:none;" alt="Cafe Background">
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// --- משתנים גלובליים ---
+let state = 'START';
+let keys = {};
+let player = {
+x: 450, y: 300, w: 30, h: 50,
+color: '#3498db', pantsColor: '#333', skin: '#ffe0bd', hair: '#4a2c2c', hat: 'none',
+speed: 6, vy: 0, grounded: false, gender: 'בן',
+hairStyle: 0, blush: null, lipstick: null, eyeshadow: null, pet: null, activeVehicle: null,
+outfitType: 'pants', // 'pants' or 'dress'
+inventory: [],
+rank: 1
+};
+let stats = { money: 500, trophies: 0, score: 0 };
+let showTimer = 0;
+
+// מאגר בדיחות לבוטים בקפה
+const botJokes = [
+    "למה ים לא יכול לטבוע? כי יש לו מצופים!",
+    "מה עושה עגבניה כשהיא רואה סלט? מסמיקה!",
+    "איך קוראים לאיגלו בקיץ? מים!",
+    "למה פיל לא משחק מחבואים? כי הוא תמיד בולט בשטח!",
+    "מה אמר הים לחוף? שום דבר, הוא רק נופף לו.",
+    "למה שלד לא הולך למסיבה? כי אין לו גוף לזה.",
+    "איך קוראים לרוטב פסטה שנפל? רוטב בולונזק!",
+    "למה זברה לובשת פיג'מה? כי היא לא מצאה את הפסים.",
+    "מה זה צהוב, ארוך ועושה באנג? בננה מתאבדת.",
+    "למה קנגורו הוא חיה מסוכנת? כי יש לו כיסוי!",
+    "מה משותף למורה ולמדחום? לשניהם עולה החום כשיש 40 תלמידים!"
+];
+
+// משתנים למשחקים
+let ball = { x: 0, y: 0, vx: 0, vy: 0 };
+let bot = { x: 0, y: 0, dir: 1, speed: 2 };
+let boss = { x: 0, y: 0, hp: 500, maxHp: 500, dir: 1, level: 1, timer: 0 };
+let bossPlayerHP = 500;
+let projectiles = [];
+let enterCooldown = false;
+let fbRound = 1;
+let fbGoals = 0;
+let fbTimer = 120; // 2 דקות לכדורגל
+let footballState = 'AIMING'; // מצב הכדורגל
+// --- משתני מסירות משופר ---
+let passesPlayerScore = 0;
+let passesBotScore = 0;
+// --- משתני משחק סנייק ---
+let snake = [], snakeDir = {}, snakeFood = {}, snakeScore = 0;
+let snakeGameTimer = 0;
+let snakeGameOver = false;
+const GRID = 30;
+// --- משתני חדר הציור ---
+let paintSurface = document.createElement('canvas');
+paintSurface.width = 600;
+paintSurface.height = 400;
+let paintCtx = paintSurface.getContext('2d');
+let paintColor = 'black';
+let paintSize = 5;
+let isPainting = false;
+let lastPaintX = 0, lastPaintY = 0;
+let paintHistory = [];
+let historyStep = -1;
+// --- משתני טריוויה ---
+let triviaStreak = 0;
+let triviaLockoutTime = 0;
+// --- משתני בית קפה (חדש - מיקמק סטייל!) ---
+let cafeWorkTimer = 0;
+let cafeIsWorking = false;
+let floatingFood = []; // אנימציות אוכל
+// --- תפריט מורחב ---
+const cafeMenu = [
+{k: '1', n: 'שוקו חם', p: 15, i: ' ☕ ', c: '#8d6e63'},
+{k: '2', n: 'פיצה אישית', p: 35, i: ' 🍕 ', c: '#f1c40f'},
+{k: '3', n: 'גלידה פיצוץ', p: 20, i: ' 🍦 ', c: '#fab1a0'},
+{k: '4', n: 'בורגר מיק', p: 40, i: ' 🍔 ', c: '#e67e22'},
+{k: '5', n: 'סופגניה', p: 12, i: ' 🍩 ', c: '#e84393'},
+{k: '6', n: 'שיק פירות', p: 18, i: ' 🥤 ', c: '#00b894'},
+// חדשים:
+{k: '7', n: 'סושי', p: 45, i: ' 🍣 ', c: '#ff7675'},
+{k: '8', n: 'צ\'יפס', p: 15, i: ' 🍟 ', c: '#ffeaa7'},
+{k: '9', n: 'קולה', p: 10, i: ' 🥤 ', c: '#2d3436'},
+{k: '0', n: 'עוגת גבינה', p: 25, i: ' 🍰 ', c: '#dfe6e9'},
+{k: 'P', n: 'פסטה', p: 30, i: ' 🍝 ', c: '#fdcb6e'},
+{k: 'S', n: 'סלט בריא', p: 20, i: ' 🥗 ', c: '#55efc4'}
+];
+
+// --- משתני קריוקי ואורות ---
+let micStream = null;
+let audioContext = null;
+let analyser = null;
+let dataArray = null;
+let isKaraokeOn = false;
+let karaokeNotes = [];
+let lightCycle = 0;
+let musicPlaying = false;
+// --- משתני חברים (בוטים) ---
+let activeNPCs = [];
+// --- עננים ---
+let clouds = [
+{x: 50, y: 50, size: 40, s: 0.5}, {x: 300, y: 80, size: 50, s: 0.3},
+{x: 600, y: 40, size: 35, s: 0.7}, {x: 850, y: 100, size: 45, s: 0.4}
+];
+// --- מערכת דרגות ---
+function getRankName(r) {
+if (r < 2) return "מתחיל";
+if (r < 5) return "מתקדם";
+if (r < 10) return "מומחה";
+if (r < 20) return "נסיך";
+return "מלך העולם";
+}
+// --- משתני קניון (חנויות מורחבות + חיות + מחסן) ---
+const shops = [
+{ x: 100, y: 200, w: 100, h: 80, color: '#e91e63', name: 'בגדים', type: 'clothes', items: [
+{n:'חולצה אדומה', p:50, val:'#e74c3c', t:'shirt'}, {n:'חולצה ירוקה', p:50, val:'#2ecc71', t:'shirt'},
+{n:'שמלה סגולה', p:80, val:'#9b59b6', t:'dress'}, {n:'שמלה ורודה', p:80, val:'#ff69b4', t:'dress'},
+{n:'חולצה כחולה', p:50, val:'#3498db', t:'shirt'}, {n:'שמלה זהב', p:120, val:'gold', t:'dress'},
+{n:'חולצה שחורה', p:70, val:'black', t:'shirt'}, {n:'חולצה לבנה', p:70, val:'white', t:'shirt'}
+]},
+{ x: 350, y: 200, w: 100, h: 80, color: '#9c27b0', name: 'אקססוריז', type: 'acc', items: [
+{n:'כובע מצחיה', p:40, val:'cap'}, {n:'מגבעת', p:80, val:'tophat'}, {n:'כתר זהב', p:300, val:'crown'}
+]},
+{ x: 600, y: 200, w: 100, h: 80, color: '#ff4081', name: 'איפור', type: 'makeup', items: [
+{n:'אודם אדום', p:30, val:'lipstick', c:'red'}, {n:'אודם ורוד', p:30, val:'lipstick', c:'#ff69b4'},
+{n:'סומק ורוד', p:30, val:'blush', c:'pink'}, {n:'סומק אפרסק', p:30, val:'blush', c:'#ffcc99'},
+{n:'צללית כחולה', p:30, val:'eyes', c:'blue'}, {n:'צללית סגולה', p:30, val:'eyes', c:'purple'}
+]},
+{ x: 100, y: 450, w: 100, h: 80, color: '#ff9800', name: 'צעצועים', type: 'toys', items: [
+{n:'מכונית ספורט', p:500, val:'car'}, {n:'דובי', p:20}, {n:'מכונית צעצוע', p:25}, {n:'רובוט', p:50}, {n:'בובה', p:30}
+]},
+{ x: 350, y: 450, w: 100, h: 80, color: '#00bcd4', name: 'מתנות', type: 'gifts', items: [
+{n:'שוקולד',p:10}, {n:'פרח', p:15}, {n:'בושם', p:100}, {n:'שרשרת',p:250}, {n:'טבעת', p:500}
+]},
+{ x: 600, y: 450, w: 100, h: 80, color: '#4caf50', name: 'חיות מחמד', type: 'pets', items: [
+{n:'כלב',p:200, val:'dog'}, {n:'חתול', p:200, val:'cat'}, {n:'ארנב',p:150, val:'bunny'},
+{n:'דרקון',p:1000, val:'dragon'}, {n:'פינגווין', p:300, val:'penguin'}
+]}
+];
+let currentShop = null;
+const sellerPhrases = ["ברוך הבא לחנות שלי!", "יש לנו סחורה נהדרת היום.", "הצבע הזה ממש יתאים לך!", "אין החזרות, מצטערת.", "תודה שקנית אצלנו!", "יום נפלא למסע קניות."];
+// --- אתחול ---
+function startGame() {
+document.getElementById('scr-start').classList.remove('active');
+document.getElementById('scr-char').classList.add('active');
+// הפעלת מוזיקה
+let audio = document.getElementById('bg-music');
+audio.volume = 0.2;
+audio.play().then(() => {
+musicPlaying = true;
+}).catch(err => {
+console.log("Auto-play blocked, wait for interaction");
+});
+canvas.focus();
+}
+
+function toggleMusic() {
+let audio = document.getElementById('bg-music');
+if (musicPlaying) {
+audio.pause();
+musicPlaying = false;
+document.getElementById('music-toggle').innerText = " 🔇 ";
+} else {
+audio.play();
+musicPlaying = true;
+document.getElementById('music-toggle').innerText = " 🔊 ";
+}
+}
+function setChar(gender) {
+player.gender = gender;
+player.color = gender === 'בן' ? '#3498db' : '#ff69b4';
+}
+function enterGame() {
+player.skin = document.getElementById('skinColor').value;
+player.hair = document.getElementById('hairColor').value;
+document.getElementById('scr-char').classList.remove('active');
+state = 'CITY';
+player.x = 450;
+player.y = 500;
+updateHUD();
+gameLoop();
+}
+// --- אירועי עכבר ---
+canvas.addEventListener('mousedown', (e) => {
+// עדכון למסך מלא: חישוב קנה מידה
+const rect = canvas.getBoundingClientRect();
+const scaleX = canvas.width / rect.width;
+const scaleY = canvas.height / rect.height;
+
+let clickX = (e.clientX - rect.left) * scaleX;
+let clickY = (e.clientY - rect.top) * scaleY;
+
+if(state === 'GAME_PAINT') {
+isPainting = true;
+lastPaintX = clickX - 150;
+lastPaintY = clickY - 100;
+} else if (state === 'MALL_SHOP') {
+checkShopClick(clickX, clickY);
+} else if (state === 'WAREHOUSE') {
+checkWarehouseClick(clickX, clickY);
+}
+});
+canvas.addEventListener('mousemove', (e) => {
+if(state === 'GAME_PAINT' && isPainting) {
+const rect = canvas.getBoundingClientRect();
+const scaleX = canvas.width / rect.width;
+const scaleY = canvas.height / rect.height;
+
+let x = (e.clientX - rect.left) * scaleX - 150;
+let y = (e.clientY - rect.top) * scaleY - 100;
+
+paintCtx.beginPath();
+paintCtx.strokeStyle = paintColor;
+paintCtx.lineWidth = paintSize;
+paintCtx.lineCap = 'round';
+paintCtx.lineJoin = 'round';
+paintCtx.moveTo(lastPaintX, lastPaintY);
+paintCtx.lineTo(x, y);
+paintCtx.stroke();
+lastPaintX = x;
+lastPaintY = y;
+}
+});
+window.addEventListener('mouseup', () => {
+if (state === 'GAME_PAINT' && isPainting) {
+isPainting = false;
+savePaintState();
+}
+});
+// --- לולאה ראשית ---
+function gameLoop() {
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+let exitBtn = document.getElementById('exit-game-btn');
+let closeShopBtn = document.getElementById('close-shop-btn');
+let exitCafeBtn = document.getElementById('exit-cafe-btn'); // כפתור חדש
+let paintUI = document.getElementById('paint-ui');
+// כפתורים
+if (state.startsWith('GAME_') && state !== 'FASHION_SHOW') exitBtn.style.display = 'block';
+else exitBtn.style.display = 'none';
+if (state === 'MALL_SHOP' || state === 'WAREHOUSE') closeShopBtn.style.display = 'block';
+else closeShopBtn.style.display = 'none';
+
+// הצגת כפתור יציאה מהקפה רק כשנמצאים בקפה
+if (state === 'CAFE') exitCafeBtn.style.display = 'block';
+else exitCafeBtn.style.display = 'none';
+if (state === 'GAME_PAINT') paintUI.style.display = 'flex';
+else paintUI.style.display = 'none';
+
+let hint = document.getElementById('enter-hint');
+hint.style.display = 'none';
+
+if (state === 'CITY') updateCity();
+else if (state === 'PALACE') updatePalace();
+else if (state === 'CAFE') updateCafe();
+else if (state === 'MALL') updateMall();
+else if (state === 'MALL_SHOP') updateShopView();
+else if (state === 'WAREHOUSE') updateWarehouse();
+else if (state === 'GAME_FOOTBALL') updateFootball();
+else if (state === 'GAME_PASSES') updatePasses();
+else if (state === 'GAME_BOSS') updateBoss();
+else if (state === 'GAME_SNAKE') updateSnake();
+else if (state === 'GAME_PAINT') updatePaint();
+else if (state === 'FASHION_SHOW') updateFashionShow();
+// ציור השחקן והחיה (בכל המצבים הרלוונטיים כולל חנות ומחסן)
+if (!state.includes('GAME_BOSS') && state !== 'GAME_PAINT' && state !== 'GAME_SNAKE' && state !== 'FASHION_SHOW' && state !== 'GAME_FOOTBALL') {
+drawPlayer(player.x, player.y);
+}
+
+// ציור תאורה ואורות
+drawLights();
+requestAnimationFrame(gameLoop);
+}
+
+// פונקציה חדשה ליציאה מהקפה
+function exitCafe() {
+enterPlace('CITY', 150, 450);
+}
+function exitGame() {
+state = 'PALACE';
+player.x = 450; player.y = 450;
+notify("יצאת מהמשחק");
+document.getElementById('game-info-box').style.display = 'none';
+}
+function showGameInfo(text) {
+let box = document.getElementById('game-info-box');
+document.getElementById('game-info-text').innerHTML = text;
+box.style.display = 'block';
+}
+// --- קלט ---
+window.addEventListener('keydown', e => {
+keys[e.code] = true;
+let isInteracting = false;
+
+// אינטראקציה עם חברים בבית קפה (דיבור)
+if (state === 'CAFE' && e.code === 'Enter') {
+    activeNPCs.forEach(npc => {
+        if (Math.abs(player.x - npc.x) < 50 && Math.abs(player.y - npc.y) < 50) {
+            let joke = botJokes[Math.floor(Math.random() * botJokes.length)];
+            // הגדלת הזמן של הבדיחה ל-8 שניות (8000 מילישניות)
+            notify("חבר: " + joke, 8000);
+            isInteracting = true;
+        }
+    });
+}
+
+// בדיקת כניסות רגילות רק אם לא מדברים כרגע
+if (e.code === 'Enter' && !enterCooldown && !isInteracting) checkAllEntrances();
+
+// קיצורים לקנייה בבית קפה
+if (state === 'CAFE') {
+if (e.key === 'w' || e.key === 'W' || e.key === "'") {
+// עבודה
+if (player.x < 150 && player.y < 300) startCafeWork();
+}
+// הפעלת קריוקי
+if (e.key === 'k' || e.key === 'K' || e.key === 'ל') {
+if (player.x > 350 && player.x < 550 && player.y > 100 && player.y < 250) {
+toggleKaraoke();
+}
+}
+// הזמנת חברים
+if (e.key === 'f' || e.key === 'F' || e.key === 'כ') {
+inviteFriends();
+}
+// בדיקת אזור מורחבת לקנייה
+if (player.x > 300 && player.y < 450) {
+if (e.key === '1') buyCafeItem(0);
+if (e.key === '2') buyCafeItem(1);
+if (e.key === '3') buyCafeItem(2);
+if (e.key === '4') buyCafeItem(3);
+if (e.key === '5') buyCafeItem(4);
+if (e.key === '6') buyCafeItem(5);
+// מאכלים חדשים
+if (e.key === '7') buyCafeItem(6);
+if (e.key === '8') buyCafeItem(7);
+if (e.key === '9') buyCafeItem(8);
+if (e.key === '0') buyCafeItem(9);
+if (e.key === 'p' || e.key === 'P' || e.key === 'פ') buyCafeItem(10);
+if (e.key === 's' || e.key === 'S' || e.key === 'ד') buyCafeItem(11);
+}
+}
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+function checkAllEntrances() {
+if (state === 'CITY') {
+if (Math.abs(player.x - 150) < 60) enterPlace('CAFE', 450, 450);
+else if (Math.abs(player.x - 300) < 60) enterPlace('WAREHOUSE', 450, 450); // כניסה למחסן
+else if (Math.abs(player.x - 450) < 60) enterPlace('MALL', 50, 400);
+else if (Math.abs(player.x - 750) < 60) enterPlace('PALACE', 450, 400);
+} else if (state === 'PALACE') {
+if (Math.abs(player.x - 100) < 40) enterPlace('GAME_FOOTBALL', 100, 300, initFootball);
+else if (Math.abs(player.x - 220) < 40) enterPlace('GAME_PASSES', 100, 300, initPasses);
+else if (Math.abs(player.x - 340) < 40) enterPlace('GAME_SNAKE', 0, 0, initSnake);
+else if (Math.abs(player.x - 460) < 40) enterPlace('GAME_PAINT', 0, 0, initPaint);
+else if (Math.abs(player.x - 580) < 40) openFashionStudio();
+else if (Math.abs(player.x - 700) < 40) enterPlace('GAME_BOSS', 100, 300, initBoss);
+else if (Math.abs(player.x - 820) < 40) openTrivia();
+else if (Math.abs(player.x - 900) < 60 && player.y > 400) enterPlace('CITY', 750, 450);
+} else if (state === 'CAFE') {
+// שיפור יציאה: כל מי שנמצא בחלק התחתון של המסך יוצא
+if (player.y > 530) enterPlace('CITY', 150, 450);
+} else if (state === 'MALL') {
+let enteredShop = false;
+shops.forEach(shop => {
+if (Math.abs(player.x - (shop.x + shop.w/2)) < 50 && Math.abs(player.y - (shop.y + shop.h)) < 50) {
+enterShop(shop);
+enteredShop = true;
+}
+});
+if (!enteredShop && player.x < 50) enterPlace('CITY', 450, 450);
+}
+}
+function enterPlace(targetState, px, py, initFunc) {
+enterCooldown = true;
+setTimeout(() => enterCooldown = false, 500);
+state = targetState;
+player.x = px; player.y = py;
+if (initFunc) initFunc();
+}
+
+function drawPlayer(x, y) {
+// ציור מכונית אם השחקן נוהג
+if (player.activeVehicle === 'car') {
+ctx.fillStyle = "red";
+ctx.fillRect(x - 10, y + 20, 50, 20); // גוף הרכב
+ctx.fillStyle = "black";
+ctx.beginPath(); ctx.arc(x, y + 40, 8, 0, Math.PI*2); ctx.fill(); // גלגל 1
+ctx.beginPath(); ctx.arc(x + 30, y + 40, 8, 0, Math.PI*2); ctx.fill(); // גלגל 2
+// השחקן בתוך הרכב (קצת מוסתר)
+y -= 10;
+}
+// גוף
+ctx.fillStyle = player.color;
+if (player.outfitType === 'dress') {
+// ציור שמלה (משולש)
+ctx.beginPath();
+ctx.moveTo(x + 15, y);
+ctx.lineTo(x - 5, y + 50);
+ctx.lineTo(x + 35, y + 50);
+ctx.fill();
+} else {
+// חולצה ומכנסיים
+ctx.fillRect(x, y, 30, 30);
+ctx.fillStyle = player.pantsColor || "#333"; ctx.fillRect(x, y+30, 30, 20);
+}
+// ראש
+ctx.fillStyle = player.skin; ctx.beginPath(); ctx.arc(x+15, y-5, 12, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = player.hair;
+let hairS = player.hairStyle || 0;
+if(hairS === 0) { ctx.beginPath(); ctx.arc(x+15, y-8, 14, Math.PI, 0); ctx.fill();}
+else if(hairS === 1) { ctx.beginPath(); ctx.arc(x+15, y-8, 14, Math.PI, 0); ctx.fill(); ctx.fillRect(x, y-8, 5, 25); ctx.fillRect(x+25, y-8, 5, 25);
+}
+else if(hairS === 2) { ctx.beginPath(); ctx.moveTo(x+15, y-20); ctx.lineTo(x+5, y-10); ctx.lineTo(x+25, y-10); ctx.fill(); ctx.beginPath(); ctx.arc(x+15, y-8, 12, Math.PI, 0); ctx.fill();
+}
+else if(hairS === 3) { ctx.beginPath(); ctx.arc(x+5, y-15, 8, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(x+25, y-15, 8, 0, Math.PI*2); ctx.fill(); ctx.beginPath();
+ctx.arc(x+15, y-8, 12, Math.PI, 0); ctx.fill();}
+
+// איפור
+if (player.blush) { ctx.fillStyle = player.blush; ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(x+10, y-3, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath();
+ctx.arc(x+20, y-3, 3, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1.0; }
+if (player.lipstick) { ctx.fillStyle = player.lipstick; ctx.fillRect(x+12, y+2, 6, 2); }
+if (player.eyeshadow) { ctx.fillStyle = player.eyeshadow; ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.arc(x+10, y-8, 4, Math.PI, 0); ctx.fill(); ctx.beginPath();
+ctx.arc(x+20, y-8, 4, Math.PI, 0); ctx.fill(); ctx.globalAlpha = 1.0; }
+
+// כובע
+if (player.hat === 'cap') { ctx.fillStyle = "red"; ctx.fillRect(x+5, y-20, 20, 10); ctx.fillRect(x+5, y-15, 30, 5); }
+else if (player.hat === 'tophat') { ctx.fillStyle = "black"; ctx.fillRect(x+5, y-25, 20, 15); ctx.fillRect(x, y-10, 30, 5); }
+else if (player.hat === 'crown') { ctx.fillStyle = "gold"; ctx.fillText("  👑  ", x+5, y-20); }
+
+// עיניים
+ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(x+10, y-5, 2, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(x+20, y-5, 2, 0, Math.PI*2); ctx.fill();
+// ציור חיית מחמד הולכת ליד השחקן
+if (player.pet && player.activeVehicle !== 'car') {
+let px = x - 30, py = y + 30;
+if (player.pet === 'dog') { ctx.fillStyle = "#8d6e63"; ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI*2); ctx.fill(); ctx.fillStyle="black";
+ctx.fillText(" 🐶 ", px-8, py+5); }
+else if (player.pet === 'cat') { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI*2); ctx.fill(); ctx.fillStyle="black";
+ctx.fillText(" 🐱 ", px-8, py+5); }
+else if (player.pet === 'bunny') { ctx.fillStyle = "#eee"; ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI*2); ctx.fill(); ctx.fillStyle="black";
+ctx.fillText(" 🐰 ", px-8, py+5); }
+else if (player.pet === 'dragon') { ctx.fillStyle = "#2ecc71"; ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2); ctx.fill(); ctx.fillStyle="black";
+ctx.fillText(" 🐲 ", px-8, py+5); }
+else if (player.pet === 'penguin') { ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI*2); ctx.fill(); ctx.fillStyle="black";
+ctx.fillText(" 🐧 ", px-8, py+5); }
+}
+}
+
+// --- פונקציית אורות חדשה ---
+function drawLights() {
+// אורות דיסקו בבית הקפה כשהקריוקי דולק
+if (state === 'CAFE' && isKaraokeOn) {
+lightCycle += 0.2;
+ctx.globalCompositeOperation = 'overlay';
+ctx.fillStyle = `hsl(${Math.sin(lightCycle)*360}, 50%, 50%)`;
+ctx.fillRect(0, 0, 900, 600);
+
+// ספוטלייטים
+let grad = ctx.createRadialGradient(450, 0, 50, 450, 600, 400);
+grad.addColorStop(0, `hsla(${lightCycle*50 % 360}, 100%, 50%, 0.8)`);
+grad.addColorStop(1, 'transparent');
+ctx.fillStyle = grad;
+ctx.beginPath(); ctx.moveTo(350, 0); ctx.lineTo(550, 0); ctx.lineTo(600, 600); ctx.lineTo(300, 600); ctx.fill();
+
+ctx.globalCompositeOperation = 'source-over';
+}
+
+// אווירת עיר
+if (state === 'CITY') {
+// קרני שמש עדינות
+ctx.fillStyle = "rgba(255, 255, 200, 0.1)";
+ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(900,0); ctx.lineTo(450, 600); ctx.fill();
+}
+
+// אפלולית בבוס
+if (state === 'GAME_BOSS') {
+ctx.fillStyle = "rgba(0,0,50, 0.3)";
+ctx.fillRect(0,0,900,600);
+}
+}
+function handleMovement(isPlatformer) {
+if (cafeIsWorking) return; // אי אפשר לזוז בזמן עבודה
+let spd = player.speed;
+if (player.activeVehicle === 'car') spd = 10; // נסיעה מהירה
+if (keys['ArrowLeft']) player.x -= spd;
+if (keys['ArrowRight']) player.x += spd;
+if (isPlatformer) {
+if (keys['ArrowUp'] && player.grounded) { player.vy = -13; player.grounded = false; }
+player.vy += 0.6;
+player.y += player.vy;
+if (player.y > 500) { player.y = 500; player.vy = 0; player.grounded = true; }
+} else {
+if (keys['ArrowUp']) player.y -= spd;
+if (keys['ArrowDown']) player.y += spd;
+}
+if(player.x < 0) player.x = 0; if(player.x > 870) player.x = 870;
+
+// גבולות אנכיים בחנויות ובמחסן ובבית קפה
+if (state === 'MALL_SHOP' || state === 'WAREHOUSE') {
+if (player.y < 200) player.y = 200;
+if (player.y > 550) player.y = 550;
+}
+if (state === 'CAFE') {
+if (player.y < 200) player.y = 200;
+}
+}
+function drawEnterHint(x, y, text) {
+if (Math.abs(player.x - x) < 60 && Math.abs(player.y - y) < 100) {
+let hint = document.getElementById('enter-hint');
+hint.style.left = (canvas.getBoundingClientRect().left + x) + 'px';
+hint.style.top = (canvas.getBoundingClientRect().top + y - 60) + 'px';
+hint.innerText = text + " [ENTER]";
+hint.style.display = 'block';
+}
+}
+// ================= העיר =================
+function updateCity() {
+let grad = ctx.createLinearGradient(0,0,0,600); grad.addColorStop(0, "#87CEEB"); grad.addColorStop(1, "white");
+ctx.fillStyle = grad; ctx.fillRect(0,0,900,600);
+ctx.fillStyle = "#2ecc71"; ctx.fillRect(0, 500, 900, 100);
+ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(100, 100, 40, 0, Math.PI*2); ctx.fill();
+clouds.forEach(c => {
+c.x += c.s; if (c.x > 950) c.x = -50;
+ctx.fillStyle = "rgba(255,255,255,0.7)";
+ctx.beginPath(); ctx.arc(c.x, c.y, c.size, 0, Math.PI*2);
+ctx.arc(c.x+20, c.y+10, c.size*0.8, 0, Math.PI*2); ctx.arc(c.x-20, c.y+10, c.size*0.8, 0, Math.PI*2);
+ctx.fill();
+});
+drawBuilding(150, "קפה", "#d35400");
+drawBuilding(300, "מחסן", "#7f8c8d"); // המחסן החדש
+drawBuilding(450, "קניון", "#9b59b6");
+drawBuilding(750, "ארמון", "#f1c40f");
+handleMovement(true);
+drawEnterHint(150, 420, "קפה");
+drawEnterHint(300, 420, "מחסן שלי");
+drawEnterHint(450, 420, "קניון");
+drawEnterHint(750, 420, "ארמון");
+}
+function drawBuilding(x, name, color) {
+ctx.fillStyle = color; ctx.fillRect(x-50, 300, 100, 200);
+ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.beginPath(); ctx.moveTo(x-60, 300); ctx.lineTo(x, 200); ctx.lineTo(x+60, 300); ctx.fill();
+ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(x-20, 420, 40, 80);
+ctx.fillStyle = "white"; ctx.font = "16px Arial"; ctx.fillText(name, x-20, 350);
+}
+
+// ================= קניון משודרג =================
+function updateMall() {
+ctx.fillStyle = "#ffecd2"; ctx.fillRect(0,0,900,600);
+ctx.fillStyle = "#fcb69f"; ctx.fillRect(0, 500, 900, 100);
+handleMovement(false);
+
+ctx.font = "30px Arial"; ctx.fillStyle = "#333";
+ctx.fillText("הקניון הגדול", 380, 100);
+// ציור החנויות
+shops.forEach(shop => {
+ctx.fillStyle = shop.color;
+ctx.fillRect(shop.x, shop.y, shop.w, shop.h);
+ctx.beginPath(); ctx.moveTo(shop.x-10, shop.y); ctx.lineTo(shop.x + shop.w/2, shop.y - 30); ctx.lineTo(shop.x + shop.w + 10, shop.y); ctx.fill();
+ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(shop.x + 35, shop.y + 40, 30, 40);
+ctx.fillStyle = "white"; ctx.font = "14px Arial"; ctx.fillText(shop.name, shop.x + 10, shop.y + 20);
+
+if (Math.abs(player.x - (shop.x + shop.w/2)) < 50 && Math.abs(player.y - (shop.y + shop.h)) < 50) {
+drawEnterHint(shop.x + 50, shop.y + 100, shop.name);
+}
+});
+if (player.x < 20) enterPlace('CITY', 450, 450);
+}
+function enterShop(shop) {
+state = 'MALL_SHOP';
+currentShop = shop;
+player.x = 450;
+player.y = 500;
+}
+function exitShop() {
+state = state === 'WAREHOUSE' ? 'CITY' : 'MALL';
+if (state === 'CITY') player.x = 300; // יציאה מהמחסן לעיר
+else player.y = 450; // יציאה מחנות לקניון
+}
+function updateShopView() {
+ctx.fillStyle = currentShop.color; ctx.fillRect(0,0,900,600);
+ctx.fillStyle = "white"; ctx.font = "40px Arial"; ctx.fillText("חנות: " + currentShop.name, 350, 80);
+handleMovement(false);
+ctx.fillStyle = "#333"; ctx.fillRect(750, 300, 50, 80);
+ctx.fillStyle = "#ffe0bd"; ctx.beginPath(); ctx.arc(775, 290, 20, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = "white"; ctx.font = "20px Arial"; ctx.fillText("מוכרת", 750, 260);
+ctx.fillStyle = "#5d4037"; ctx.fillRect(650, 380, 250, 100);
+// פריטים
+currentShop.items.forEach((item, i) => {
+let col = i % 4; let row = Math.floor(i / 4);
+let x = 50 + col * 160; let y = 150 + row * 120;
+ctx.fillStyle = "white"; ctx.fillRect(x, y, 140, 100);
+ctx.strokeStyle = "gold"; ctx.lineWidth = 3; ctx.strokeRect(x, y, 140, 100);
+ctx.fillStyle = "black"; ctx.font = "16px Arial"; ctx.fillText(item.n, x + 10, y + 40);
+ctx.fillStyle = "green"; ctx.font = "bold 18px Arial"; ctx.fillText(item.p + "$", x + 10, y + 80);
+});
+}
+function checkShopClick(x, y) {
+if (!currentShop) return;
+if (x > 750 && x < 800 && y > 280 && y < 380) {
+let phrase = sellerPhrases[Math.floor(Math.random() * sellerPhrases.length)];
+notify("המוכרת: " + phrase);
+return;
+}
+currentShop.items.forEach((item, i) => {
+let col = i % 4; let row = Math.floor(i / 4);
+let itemX = 50 + col * 160; let itemY = 150 + row * 120;
+if (x > itemX && x < itemX + 140 && y > itemY && y < itemY + 100) {
+buyShopItem(item);
+}
+});
+}
+function buyShopItem(item) {
+if (stats.money >= item.p) {
+stats.money -= item.p;
+updateHUD();
+notify("קנית: " + item.n);
+
+// יצירת אובייקט חדש שכולל גם את סוג החנות (חשוב לזיהוי הפריט)
+let newItem = {
+n: item.n,
+p: item.p,
+val: item.val,
+c: item.c,      // לאיפור
+t: item.t,      // לסוג בגד (שמלה/חולצה)
+type: currentShop.type // *** התיקון החשוב: הוספת הסוג מהחנות ***
+};
+// הוספה למחסן (הימנעות מכפילויות אם זה לא מתכלה)
+if (!player.inventory.some(i => i.n === newItem.n)) {
+player.inventory.push(newItem);
+}
+// לבישה מידית
+equipItem(newItem);
+
+} else {
+notify("אין מספיק כסף!");
+}
+}
+// ================= המחסן (Inventory) =================
+function updateWarehouse() {
+ctx.fillStyle = "#7f8c8d"; ctx.fillRect(0,0,900,600); // קיר אפור
+ctx.fillStyle = "white"; ctx.font = "40px Arial"; ctx.fillText("המחסן שלי (לחץ לשימוש)", 250, 60);
+
+handleMovement(false);
+// ציור פריטים במלאי
+if (player.inventory.length === 0) {
+ctx.font = "30px Arial"; ctx.fillText("המחסן ריק. לך לקניון!", 300, 300);
+} else {
+player.inventory.forEach((item, i) => {
+let col = i % 5; let row = Math.floor(i / 5);
+let x = 50 + col * 160; let y = 100 + row * 120;
+ctx.fillStyle = "white"; ctx.fillRect(x, y, 140, 100);
+
+// בדיקה אם הפריט כרגע בשימוש
+let isEquipped = false;
+if (item.type === 'clothes' && player.color === item.val) isEquipped = true;
+if (item.type === 'acc' && player.hat === item.val) isEquipped = true;
+if (item.type === 'pets' && player.pet === item.val) isEquipped = true;
+if (item.val === 'car' && player.activeVehicle === 'car') isEquipped = true;
+// מסגרת שונה אם בשימוש
+ctx.strokeStyle = isEquipped ? "#00ff00" : "blue";
+ctx.lineWidth = isEquipped ? 4 : 2;
+ctx.strokeRect(x, y, 140, 100);
+
+ctx.fillStyle = "black"; ctx.font = "16px Arial";
+ctx.fillText(item.n, x + 10, y + 40);
+
+// כפתור פעולה
+ctx.fillStyle = isEquipped ? "red" : "green";
+ctx.fillRect(x+10, y+60, 120, 30);
+ctx.fillStyle = "white"; ctx.font = "14px Arial";
+
+let btnText = isEquipped ? "הסר" : "לבש/השתמש";
+if (item.type === 'pets') btnText = isEquipped ? "שלח למחסן" : "קח איתך";
+if (item.val === 'car') btnText = isEquipped ? "צא מהרכב" : "כנס לרכב";
+if (item.type === 'food') btnText = "אכול";
+
+ctx.fillText(btnText, x + 20, y + 80);
+});
+}
+}
+function checkWarehouseClick(x, y) {
+player.inventory.forEach((item, i) => {
+let col = i % 5; let row = Math.floor(i / 5);
+let itemX = 50 + col * 160; let itemY = 100 + row * 120;
+if (x > itemX && x < itemX + 140 && y > itemY && y < itemY + 100) {
+equipItem(item);
+// רענון מיידי של המחסן כדי שיראו את השינוי בכפתור
+setTimeout(updateWarehouse, 50);
+}
+});
+}
+function equipItem(item) {
+// --- בגדים ---
+if (item.type === 'clothes') {
+if (player.color === item.val) {
+// הסרה
+player.color = player.gender === 'בן' ? '#3498db' : '#ff69b4'; // חזרה לצבע ברירת מחדל
+player.outfitType = 'pants';
+notify("הורדת: " + item.n);
+} else {
+// לבישה
+if (item.t === 'dress') player.outfitType = 'dress';
+else player.outfitType = 'pants';
+player.color = item.val;
+notify("לובש: " + item.n);
+}
+}
+// --- כובעים ---
+else if (item.type === 'acc') {
+if (player.hat === item.val) {
+player.hat = 'none';
+notify("הורדת: " + item.n);
+} else {
+player.hat = item.val;
+notify("חובש: " + item.n);
+}
+}
+// --- איפור (אי אפשר להסיר כרגע, רק להחליף) ---
+else if (item.type === 'makeup') {
+if (item.val === 'lipstick') player.lipstick = item.c;
+if (item.val === 'blush') player.blush = item.c;
+if (item.val === 'eyes') player.eyeshadow = item.c;
+notify("התאפרת ב: " + item.n);
+}
+// --- חיות מחמד ---
+else if (item.type === 'pets') {
+if (player.pet === item.val) {
+player.pet = null;
+notify(item.n + " חזר/ה למחסן");
+} else {
+player.pet = item.val;
+notify(item.n + " בא/ה איתך!");
+}
+}
+// --- רכב ---
+else if (item.val === 'car') {
+player.activeVehicle = (player.activeVehicle === 'car') ? null : 'car'; // toggle
+notify(player.activeVehicle ? "נכנסת לרכב" : "יצאת מהרכב");
+}
+// --- אוכל וצעצועים ---
+else if (item.type === 'food') {
+notify("יאמי! " + item.n + " היה טעים!");
+let idx = player.inventory.indexOf(item);
+if (idx > -1) player.inventory.splice(idx, 1);
+}
+else if (item.type === 'toys') {
+notify("משחק עם " + item.n + "!");
+}
+else if (item.type === 'gifts') {
+notify("מחזיק " + item.n + "!");
+}
+}
+// ================= בית קפה (מיקמק סטייל!) =================
+function updateCafe() {
+// --- רקע צבעוני ומשובץ (סטייל מיקמק) ---
+// רצפה
+for(let i=0; i<900; i+=50) {
+for(let j=200; j<600; j+=50) {
+ctx.fillStyle = ((i+j)%100 === 0) ? "#feca57" : "#ff9f43"; // משבצות כתום/צהוב
+ctx.fillRect(i, j, 50, 50);
+}
+}
+// קיר
+let grad = ctx.createLinearGradient(0,0,0,200);
+grad.addColorStop(0, "#54a0ff"); grad.addColorStop(1, "#2e86de");
+ctx.fillStyle = grad; ctx.fillRect(0,0,900,200);
+
+// חלון לעיר
+ctx.fillStyle = "#81ecec"; ctx.fillRect(350, 50, 200, 100);
+ctx.strokeStyle = "white"; ctx.lineWidth = 5; ctx.strokeRect(350, 50, 200, 100);
+ctx.beginPath(); ctx.moveTo(450, 50); ctx.lineTo(450, 150); ctx.moveTo(350, 100); ctx.lineTo(550, 100); ctx.stroke();
+
+// --- ריהוט מעוצב ---
+drawTable(250, 450);
+drawTable(500, 450);
+// דלפק
+ctx.fillStyle = "#d35400"; // כתום כהה
+ctx.beginPath(); ctx.roundRect(600, 250, 250, 300, 20); ctx.fill();
+ctx.fillStyle = "#e67e22"; // משטח
+ctx.fillRect(590, 250, 270, 40);
+ctx.fillStyle = "white"; ctx.font = "bold 20px Arial"; ctx.fillText("CAFE", 700, 350);
+// מוכרת (בריסטה) משודרגת
+ctx.fillStyle = "#ff9ff3"; // בגד ורוד
+ctx.beginPath(); ctx.arc(720, 210, 30, 0, Math.PI*2); ctx.fill(); // ראש
+ctx.fillStyle = "#f368e0"; ctx.fillRect(690, 240, 60, 40); // גוף
+ctx.fillStyle = "black"; ctx.fillText(" 👩‍🍳 ", 705, 220);
+// אזור מטבח לעבודה
+ctx.fillStyle = "#0984e3";
+ctx.beginPath(); ctx.roundRect(20, 220, 150, 300, 15); ctx.fill();
+ctx.fillStyle = "white"; ctx.font = "20px Arial";
+ctx.fillText("אזור עובדים", 40, 260);
+ctx.fillText("[W] לעבוד", 50, 290);
+ctx.font = "40px Arial"; ctx.fillText(" 🧼 ", 75, 350);
+// במה לקריוקי
+ctx.fillStyle = "#2d3436";
+ctx.beginPath(); ctx.ellipse(450, 250, 100, 30, 0, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = "#fd79a8"; // אורות
+ctx.fillRect(400, 270, 100, 10);
+
+// --- שינוי: הוראות קריוקי בולטות ---
+// רקע להוראות
+ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+ctx.beginPath(); ctx.roundRect(380, 220, 140, 80, 10); ctx.fill(); // הגדלנו קצת את הרקע
+ctx.strokeStyle = "gold"; ctx.lineWidth = 2; ctx.stroke();
+
+ctx.fillStyle = "white"; ctx.font = "bold 16px Arial";
+ctx.fillText("לבמה וקריוקי:", 450, 240);
+ctx.fillStyle = "yellow";
+ctx.fillText("לחץ על [K]", 450, 260);
+// ** התוספת החדשה: הסבר על בדיחות **
+ctx.fillStyle = "cyan"; ctx.font = "bold 13px Arial";
+ctx.fillText("לבדיחה: עמוד ליד חבר ו-[ENTER]", 450, 290);
+
+if(isKaraokeOn) {
+    ctx.font = "bold 20px Arial";
+    ctx.fillText(" 🎤   שיר !", 450, 200);
+}
+
+handleMovement(false);
+// --- בוטים חברים ---
+activeNPCs.forEach(npc => {
+npc.x += npc.vx;
+if (npc.x > 800 || npc.x < 100) npc.vx *= -1;
+// ציור פשוט של חבר
+ctx.fillStyle = npc.color;
+ctx.fillRect(npc.x, npc.y, 30, 30);
+ctx.fillStyle = "#ffe0bd"; ctx.beginPath(); ctx.arc(npc.x+15, npc.y-5, 12, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = "white"; ctx.font = "12px Arial"; ctx.fillText("חבר", npc.x, npc.y - 20);
+});
+// --- אוכל צף (אנימציה כשקונים) ---
+for(let i=0; i<floatingFood.length; i++) {
+let f = floatingFood[i];
+f.y -= 1; f.life--;
+ctx.font = "30px Arial"; ctx.fillText(f.icon, f.x, f.y);
+if(f.life <= 0) { floatingFood.splice(i, 1); i--; }
+}
+// --- קריוקי ---
+if (isKaraokeOn) {
+updateKaraokeVisuals();
+}
+// --- לוגיקת קנייה (תפריט מעוצב) ---
+let canBuy = player.x > 300 && player.y < 450; // אזור מורחב ונוח יותר
+
+if (canBuy) {
+// סימון ויזואלי לשחקן
+ctx.strokeStyle = "cyan"; ctx.lineWidth = 3;
+ctx.beginPath(); ctx.arc(player.x+15, player.y+25, 40, 0, Math.PI*2); ctx.stroke();
+// רקע תפריט
+ctx.fillStyle = "rgba(0,0,0,0.9)";
+ctx.beginPath(); ctx.roundRect(150, 30, 600, 350, 20); ctx.fill();
+ctx.strokeStyle = "#00cec9"; ctx.lineWidth = 4; ctx.stroke();
+
+ctx.fillStyle = "#00cec9"; ctx.font = "bold 24px Arial"; ctx.textAlign = "center";
+ctx.fillText(" ✨   התפריט   המתוק   של   הממלכה   ✨ ", 450, 65);
+ctx.font = "16px Arial"; ctx.fillStyle = "yellow";
+ctx.fillText("[F] להזמין חברים | לחץ על מספר המנה לקנייה", 450, 85);
+
+// כרטיסיות אוכל
+cafeMenu.forEach((item, i) => {
+let row = Math.floor(i / 3);
+let col = i % 3;
+let cardX = 170 + col * 190;
+let cardY = 100 + row * 55;
+
+// כרטיס
+ctx.fillStyle = item.c || "#fff";
+ctx.beginPath(); ctx.roundRect(cardX, cardY, 180, 45, 10); ctx.fill();
+
+// טקסט
+ctx.fillStyle = "black"; ctx.font = "bold 16px Arial"; ctx.textAlign = "right";
+ctx.fillText(`[${item.k}] ${item.i} ${item.n}`, cardX + 170, cardY + 28);
+ctx.fillStyle = "#2d3436"; ctx.font = "bold 14px Arial"; ctx.textAlign = "left";
+ctx.fillText(`${item.p}$`, cardX + 10, cardY + 28);
+});
+}
+
+// --- לוגיקת עבודה ---
+if (cafeIsWorking) {
+cafeWorkTimer++;
+// סרגל התקדמות
+ctx.fillStyle = "white"; ctx.fillRect(player.x - 20, player.y - 40, 60, 10);
+ctx.fillStyle = "lime"; ctx.fillRect(player.x - 20, player.y - 40, 60 * (cafeWorkTimer/300), 10);
+
+if (cafeWorkTimer >= 300) {
+cafeIsWorking = false;
+let salary = 50;
+stats.money += salary;
+updateHUD();
+notify("סיימת משמרת! הרווחת " + salary + "$");
+}
+}
+// יציאה
+drawEnterHint(450, 580, "צא לעיר");
+}
+// --- פונקציות קריוקי וחברים ---
+async function toggleKaraoke() {
+if (isKaraokeOn) {
+isKaraokeOn = false;
+if(audioContext) {
+audioContext.close();
+audioContext = null;
+}
+notify("הקריוקי כבוי");
+return;
+}
+
+// נסיון ראשון: מיקרופון אמיתי
+try {
+const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const source = audioContext.createMediaStreamSource(stream);
+analyser = audioContext.createAnalyser();
+analyser.fftSize = 256;
+source.connect(analyser);
+dataArray = new Uint8Array(analyser.frequencyBinCount);
+isKaraokeOn = true;
+notify("מיקרופון מחובר! תשיר!");
+} catch(err) {
+// אם המיקרופון נכשל/חסום - הפעל מצב "שירה אוטומטית"
+console.log("Mic blocked, using fake mode");
+isKaraokeOn = true;
+analyser = null; // מצב מדומה
+notify("מיקרופון חסום - השחקן שר לבד!");
+}
+}
+function updateKaraokeVisuals() {
+let volume = 0;
+
+if (analyser) {
+// מצב מיקרופון אמיתי - מגיב לקול שלך
+analyser.getByteFrequencyData(dataArray);
+let sum = 0;
+for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+volume = sum / dataArray.length;
+} else {
+// מצב מדומה - מוציא תווים רנדומלית
+volume = Math.random() * 100;
+}
+// אם יש ווליום (או סתם רנדומלי), תוציא תווים
+if (volume > 20) {
+if (Math.random() < 0.2) {
+karaokeNotes.push({x: player.x, y: player.y - 50, val: " 🎵 ", vy: 2, alpha: 1});
+}
+}
+
+// ציור תווים עולים למעלה
+for (let i = 0; i < karaokeNotes.length; i++) {
+let n = karaokeNotes[i];
+n.y -= n.vy; n.alpha -= 0.02;
+ctx.globalAlpha = n.alpha;
+ctx.fillStyle = "gold"; ctx.font = "30px Arial"; ctx.fillText(n.val, n.x, n.y);
+ctx.globalAlpha = 1.0;
+if (n.alpha <= 0) { karaokeNotes.splice(i, 1); i--; }
+}
+}
+function inviteFriends() {
+if (activeNPCs.length >= 5) {
+notify("האולם מלא!"); return;
+}
+activeNPCs.push({
+x: Math.random() * 800 + 50,
+y: 450,
+vx: Math.random() > 0.5 ? 2 : -2,
+color: `hsl(${Math.random()*360}, 70%, 50%)`
+});
+notify("הזמנת חבר!");
+}
+function drawTable(x, y) {
+// צל
+ctx.fillStyle = "rgba(0,0,0,0.2)";
+ctx.beginPath(); ctx.ellipse(x, y+40, 50, 15, 0, 0, Math.PI*2); ctx.fill();
+
+// רגל
+ctx.fillStyle = "#636e72";
+ctx.fillRect(x-5, y, 10, 40);
+
+// פלטה עגולה
+ctx.fillStyle = "#fab1a0"; // ורוד/כתום בהיר
+ctx.beginPath(); ctx.ellipse(x, y, 60, 25, 0, 0, Math.PI*2); ctx.fill();
+ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.stroke(); // מסגרת לבנה
+
+// כיסאות מעוצבים
+ctx.fillStyle = "#ff7675";
+ctx.beginPath(); ctx.roundRect(x-60, y+10, 25, 30, 5); ctx.fill();
+ctx.beginPath(); ctx.roundRect(x+35, y+10, 25, 30, 5); ctx.fill();
+}
+function buyCafeItem(index) {
+if(index >= cafeMenu.length) return;
+let item = cafeMenu[index];
+if (stats.money >= item.p) {
+stats.money -= item.p;
+updateHUD();
+notify("קנית " + item.n + "!");
+// אנימציית אוכל צף
+floatingFood.push({x: player.x, y: player.y - 50, icon: item.i, life: 60});
+
+// הוספה למלאי כ'אוכל'
+player.inventory.push({
+n: item.n,
+p: item.p,
+val: 'yum',
+type: 'food',
+i: item.i
+});
+} else {
+notify("אין מספיק כסף!");
+}
+}
+function startCafeWork() {
+if (!cafeIsWorking) {
+cafeIsWorking = true;
+cafeWorkTimer = 0;
+notify("מתחיל לעבוד... שוטף כלים!");
+}
+}
+// ================= ארמון =================
+function updatePalace() {
+ctx.fillStyle = "#2c3e50"; ctx.fillRect(0,0,900,600);
+ctx.fillStyle = "#c0392b"; ctx.fillRect(100, 500, 700, 20);
+drawDoor(100, "כדורגל", 1);
+drawDoor(220, "מסירות", 2);
+drawDoor(340, "סנייק", 3); // החלפנו לבריכה
+drawDoor(460, "ציור", 4);
+drawDoor(580, "אופנה", 5);
+drawDoor(700, "בוסים", 6);
+drawDoor(820, "טריוויה", 7);
+ctx.fillStyle = "red"; ctx.fillRect(900, 400, 40, 100); ctx.fillStyle="white"; ctx.fillText("יציאה", 880, 390);
+drawEnterHint(100, 420, "כדורגל");
+drawEnterHint(220, 420, "מסירות");
+drawEnterHint(340, 420, "סנייק");
+drawEnterHint(460, 420, "חדר ציור");
+drawEnterHint(580, 420, "אופנה");
+drawEnterHint(700, 420, "בוסים");
+drawEnterHint(820, 420, "חידון");
+drawEnterHint(900, 420, "לעיר");
+handleMovement(true);
+}
+function drawDoor(x, name, num) {
+ctx.fillStyle = "#8e44ad"; ctx.fillRect(x-30, 350, 60, 150);
+ctx.fillStyle = "gold"; ctx.beginPath(); ctx.arc(x+20, 430, 5, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = "white"; ctx.font = "bold 24px Arial"; ctx.fillText(num, x-10, 380);
+ctx.font = "14px Arial"; ctx.fillText(name, x-20, 340);
+}
+// ================= כדורגל משודרג (מצב בעיטות עונשין) =================
+function initFootball() {
+footballState = 'AIMING';
+ball = { x: 200, y: 300, w: 15, h: 15, dy: 4 }; // כדור זז אנכית
+bot = { x: 850, y: 300, dir: 1, speed: 6 }; // שוער מהיר
+player.x = 100; player.y = 300;
+fbGoals = 0;
+fbTimer = 120; // 2 דקות
+showGameInfo("כדורגל!<br>הכדור זז לבד<br>לחץ רווח לבעיטה ברגע הנכון<br>הבקע 4 גולים");
+}
+function updateFootball() {
+// רקע
+ctx.fillStyle = "#27ae60"; ctx.fillRect(0,0,900,600);
+// שער
+ctx.strokeStyle = "white"; ctx.lineWidth = 5; ctx.strokeRect(850, 200, 50, 200);
+
+// טיימר (בולט יותר)
+fbTimer -= 1/60;
+ctx.fillStyle = "white";
+ctx.font = "bold 28px Arial";
+ctx.fillText(`זמן: ${Math.ceil(fbTimer)} | גולים: ${fbGoals}/4`, 50, 50);
+// --- לוגיקת שוער ---
+bot.y += bot.speed * bot.dir;
+// גבולות השוער (רק בתוך השער)
+if (bot.y < 220 || bot.y > 380) bot.dir *= -1;
+
+// ציור שוער
+ctx.fillStyle = "red"; ctx.fillRect(bot.x, bot.y, 30, 30);
+// --- לוגיקת כדור ושחקן ---
+if (footballState === 'AIMING') {
+// הכדור זז למעלה ולמטה מול השחקן
+ball.y += ball.dy || 4;
+if (ball.y < 200 || ball.y > 400) {
+ball.dy = (ball.dy || 4) * -1;
+}
+// מיקום הכדור קבוע בציר ה-X
+ball.x = 200;
+// הוראה
+ctx.fillStyle = "yellow"; ctx.font = "20px Arial";
+ctx.fillText("לחץ רווח לבעיטה!", 200, 150);
+// בעיטה
+if (keys['Space']) {
+footballState = 'KICKING';
+}
+}
+else if (footballState === 'KICKING') {
+// הכדור טס ישר
+ball.x += 15;
+// בדיקת פגיעה בשוער (הצלה)
+if (Math.abs(ball.x - bot.x) < 30 && Math.abs(ball.y - bot.y) < 30) {
+notify("הדיפה!");
+footballState = 'AIMING';
+ball.x = 200; // חזרה להתחלה
+}
+// בדיקת גול
+if (ball.x > 850) {
+if (ball.y > 200 && ball.y < 400) {
+fbGoals++;
+notify(`גול!(${fbGoals}/4)`);
+if (fbGoals >= 4) {
+alert("ניצחת בכדורגל! +200$");
+stats.money += 200; updateHUD(); exitGame();
+}
+} else {
+notify("החמצה!");
+}
+footballState = 'AIMING';
+ball.x = 200;
+}
+}
+// ציור שחקן (עומד ליד הכדור)
+drawPlayer(150, 300);
+// ציור כדור
+ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(ball.x, ball.y, 10, 0, Math.PI*2); ctx.fill();
+// הפסד בזמן
+if (fbTimer <= 0) {
+alert("נגמר הזמן! לא הבקעת מספיק.");
+exitGame();
+}
+}
+// ================= מסירות =================
+function initPasses() {
+ball = { x: 450, y: 300, vx: 8, vy: 0 };
+bot = { x: 800, y: 300, dir: 1, speed: 6 };
+player.x = 100; player.y = 300;
+passesPlayerScore = 0;
+passesBotScore = 0;
+showGameInfo("מסירות אקסטרים!<br>הראשון ל-5 מנצח<br>הבוט משוגע!");
+}
+function updatePasses() {
+ctx.fillStyle = "#e67e22"; ctx.fillRect(0,0,900,600);
+ctx.fillStyle = "white"; ctx.fillRect(448, 0, 4, 600); // רשת
+// תצוגת ניקוד גדולה
+ctx.font = "bold 60px Arial";
+ctx.fillText(passesPlayerScore, 200, 100);
+ctx.fillText(passesBotScore, 700, 100);
+handleMovement(false);
+
+// בוט חכם יותר
+if (ball.y > bot.y + 10) bot.y += bot.speed;
+else if (ball.y < bot.y - 10) bot.y -= bot.speed;
+
+ctx.fillStyle = "red"; ctx.fillRect(bot.x, bot.y, 30, 60);
+ball.x += ball.vx; ball.y += ball.vy;
+
+// שחקן מחזיר
+if (Math.hypot(player.x - ball.x, player.y - ball.y) < 50) {
+ball.vx = Math.abs(ball.vx) + 0.5;
+ball.vy = (ball.y - player.y) * 0.4;
+notify("החזרת!");
+}
+
+// בוט מחזיר במכה מסובבת
+if (Math.hypot(bot.x - ball.x, bot.y - ball.y) < 50) {
+ball.vx = -(Math.abs(ball.vx) + 0.5);
+ball.vy = (Math.random() - 0.5) * 20; // זווית משוגעת
+notify("מכה מסובבת!");
+}
+
+// גבולות עליון/תחתון
+if (ball.y < 0 || ball.y > 600) ball.vy *= -1;
+
+// הבקעת נקודות
+if (ball.x < 0) {
+passesBotScore++;
+notify("נקודה לבוט!");
+resetBall('bot');
+}
+if (ball.x > 900) {
+passesPlayerScore++;
+notify("נקודה שלך!");
+resetBall('player');
+}
+// תנאי ניצחון/הפסד
+if (passesPlayerScore >= 5) {
+alert("ניצחת במשחק המסירות! +100$");
+stats.money += 100; updateHUD();
+exitGame();
+}
+if (passesBotScore >= 5) {
+alert("הפסדת! הבוט הגיע ל-5 קודם.");
+exitGame();
+}
+ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(ball.x, ball.y, 10, 0, Math.PI*2); ctx.fill();
+}
+function resetBall(scorer) {
+ball.x = 450; ball.y = 300; ball.vy = 0;
+// המפסיד מגיש
+if (scorer === 'bot') ball.vx = -6;
+else ball.vx = 6;
+}
+
+// ================= משחק הסנייק המשופר (עם ניצחון וריסט) =================
+function initSnake() {
+snake = [{x: 10, y: 10}, {x: 9, y: 10}, {x: 8, y: 10}];
+snakeDir = {x: 1, y: 0};
+snakeFood = {x: 15, y: 10};
+snakeScore = 0;
+snakeGameTimer = 0;
+snakeGameOver = false; // איפוס מצב פסילה
+showGameInfo("משחק הסנייק<br>אסוף תפוחים<br>הגע ל-100 נקודות!");
+}
+function updateSnake() {
+// רקע ירוק
+ctx.fillStyle = "#2ecc71"; ctx.fillRect(0,0,900,600);
+
+// אם נפסלנו - מציגים מסך מיוחד ולא יוצאים
+if (snakeGameOver) {
+ctx.fillStyle = "rgba(0,0,0,0.6)";
+ctx.fillRect(0,0,900,600);
+
+ctx.fillStyle = "white";
+ctx.font = "bold 50px Arial";
+ctx.textAlign = "center";
+ctx.fillText("נפסלת! 😢 ", 450, 250);
+
+ctx.font = "30px Arial";
+ctx.fillText("אבל תמיד אפשר לנסות שוב", 450, 310);
+
+ctx.fillStyle = "gold";
+ctx.fillText("לחץ על רווח (Space) להתחלה מחדש", 450, 380);
+
+// בדיקת לחיצה על רווח לריסט
+if (keys['Space']) {
+initSnake();
+}
+return; // עוצרים את שאר הלוגיקה
+}
+// שליטה
+if (keys['ArrowUp'] && snakeDir.y === 0) snakeDir = {x: 0, y: -1};
+if (keys['ArrowDown'] && snakeDir.y === 0) snakeDir = {x: 0, y: 1};
+if (keys['ArrowLeft'] && snakeDir.x === 0) snakeDir = {x: -1, y: 0};
+if (keys['ArrowRight'] && snakeDir.x === 0) snakeDir = {x: 1, y: 0};
+// האטה
+snakeGameTimer++;
+if (snakeGameTimer < 5) {
+drawSnake();
+return;
+}
+snakeGameTimer = 0;
+// תזוזה
+let head = {x: snake[0].x + snakeDir.x, y: snake[0].y + snakeDir.y};
+// בדיקת התנגשות בקירות
+if (head.x < 0 || head.x >= 30 || head.y < 0 || head.y >= 20) {
+snakeGameOver = true;
+return;
+}
+// בדיקת התנגשות עצמית
+for (let i = 0; i < snake.length; i++) {
+if (head.x === snake[i].x && head.y === snake[i].y) {
+snakeGameOver = true;
+return;
+}
+}
+snake.unshift(head);
+// בדיקת אכילה
+if (head.x === snakeFood.x && head.y === snakeFood.y) {
+snakeScore += 10;
+notify("+10 נקודות!");
+snakeFood = {
+x: Math.floor(Math.random() * 30),
+y: Math.floor(Math.random() * 20)
+};
+
+// תנאי ניצחון
+if(snakeScore >= 100) {
+alert("ניצחת בסנייק! כל הכבוד! +150$");
+stats.money += 150; updateHUD();
+exitGame();
+}
+} else {
+snake.pop();
+}
+drawSnake();
+}
+function drawSnake() {
+// ציור אוכל
+ctx.fillStyle = "red";
+ctx.fillRect(snakeFood.x * GRID, snakeFood.y * GRID, GRID-2, GRID-2);
+// ציור נחש
+ctx.fillStyle = "blue";
+snake.forEach(part => {
+ctx.fillRect(part.x * GRID, part.y * GRID, GRID-2, GRID-2);
+});
+// ציור ניקוד
+ctx.fillStyle = "white"; ctx.font = "24px Arial"; ctx.textAlign = "left";
+ctx.fillText("ניקוד: " + snakeScore + "/100", 20, 30);
+}
+
+// ================= סטודיו אופנה =================
+
+let fashionCurrent = {
+shirt: '#3498db', pants: '#333', hairColor: '#4a2c2c', hairStyle: 0,
+blush: null, lipstick: null, eyeshadow: null
+};
+const palettes = {
+clothes: ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#34495e', '#ffffff', '#000000', '#ff69b4'],
+hair: ['#4a2c2c', '#d35400', '#f1c40f', '#000000', '#95a5a6', '#ecf0f1', '#ff0000', '#8e44ad'],
+makeup: ['#ffb7b2', '#ff69b4', '#e056fd', '#ff0000', '#880000', '#00ff00', '#0000ff', '#null']
+};
+function openFashionStudio() {
+state = 'FASHION';
+document.getElementById('scr-fashion').classList.add('active');
+
+fashionCurrent.shirt = player.color;
+fashionCurrent.pants = player.pantsColor || '#333';
+fashionCurrent.hairColor = player.hair;
+fashionCurrent.hairStyle = player.hairStyle || 0;
+fashionCurrent.blush = player.blush;
+fashionCurrent.lipstick = player.lipstick;
+fashionCurrent.eyeshadow = player.eyeshadow;
+createPalette('shirt-pal', palettes.clothes, 'shirt');
+createPalette('pants-pal', palettes.clothes, 'pants');
+createPalette('hair-pal', palettes.hair, 'hairColor');
+createPalette('blush-pal', palettes.makeup, 'blush');
+createPalette('lips-pal', palettes.makeup, 'lipstick');
+createPalette('eyes-pal', palettes.makeup, 'eyeshadow');
+renderFashionCanvas();
+}
+function createPalette(id, colors, type) {
+const div = document.getElementById(id);
+div.innerHTML = '';
+colors.forEach(c => {
+let d = document.createElement('div');
+d.className = 'p-color';
+if (c === '#null') { d.style.background = 'transparent'; d.innerText = ' ❌ '; d.style.textAlign='center'; }
+else d.style.background = c;
+
+d.onclick = () => {
+applyColor(type, c === '#null' ? null : c);
+};
+div.appendChild(d);
+});
+}
+function togglePalette(id) {
+let el = document.getElementById(id);
+el.classList.toggle('show');
+}
+function applyColor(type, color) {
+fashionCurrent[type] = color;
+renderFashionCanvas();
+}
+function changeHairType() {
+fashionCurrent.hairStyle = (fashionCurrent.hairStyle + 1) % 4;
+renderFashionCanvas();
+}
+function renderFashionCanvas() {
+const cvs = document.getElementById('fashionCanvas');
+const c = cvs.getContext('2d');
+c.clearRect(0,0,250,350);
+c.fillStyle = '#f0f0f0'; c.fillRect(0,0,250,350);
+const cx = 125, cy = 100;
+c.fillStyle = fashionCurrent.shirt; c.fillRect(cx - 40, cy + 60, 80, 80);
+c.fillStyle = fashionCurrent.pants; c.fillRect(cx - 35, cy + 140, 70, 90);
+c.fillStyle = player.skin; c.fillRect(cx - 15, cy + 40, 30, 20);
+c.fillStyle = player.skin; c.beginPath(); c.arc(cx, cy, 45, 0, Math.PI*2); c.fill();
+if (fashionCurrent.blush) { c.fillStyle = fashionCurrent.blush; c.globalAlpha = 0.5; c.beginPath(); c.arc(cx - 25, cy + 10, 8, 0, Math.PI*2); c.fill();
+c.beginPath(); c.arc(cx + 25, cy + 10, 8, 0, Math.PI*2); c.fill(); c.globalAlpha = 1.0; }
+if (fashionCurrent.lipstick) { c.fillStyle = fashionCurrent.lipstick; c.beginPath(); c.ellipse(cx, cy + 25, 10, 5, 0, 0, Math.PI*2); c.fill();}
+if (fashionCurrent.eyeshadow) { c.fillStyle = fashionCurrent.eyeshadow; c.globalAlpha = 0.6; c.beginPath(); c.arc(cx - 15, cy - 8, 10, Math.PI, 0); c.fill();
+c.beginPath(); c.arc(cx + 15, cy - 8, 10, Math.PI, 0); c.fill(); c.globalAlpha = 1.0; }
+c.fillStyle = 'black'; c.beginPath(); c.arc(cx - 15, cy - 5, 4, 0, Math.PI*2); c.fill(); c.beginPath();
+c.arc(cx + 15, cy - 5, 4, 0, Math.PI*2); c.fill();
+c.fillStyle = fashionCurrent.hairColor;
+if (fashionCurrent.hairStyle === 0) { c.beginPath(); c.arc(cx, cy - 5, 50, Math.PI, 0); c.fill(); }
+else if (fashionCurrent.hairStyle === 1) { c.beginPath(); c.arc(cx, cy - 5, 50, Math.PI, 0); c.fill();
+c.fillRect(cx - 50, cy - 5, 20, 100); c.fillRect(cx + 30, cy - 5, 20, 100); }
+else if (fashionCurrent.hairStyle === 2) { c.beginPath(); c.arc(cx, cy - 10, 48, Math.PI, 0); c.fill(); c.beginPath(); c.moveTo(cx, cy-50); c.lineTo(cx-20, cy-80);
+c.lineTo(cx+20, cy-80); c.fill();}
+else if (fashionCurrent.hairStyle === 3) { c.beginPath(); c.arc(cx - 45, cy - 30, 25, 0, Math.PI*2); c.fill(); c.beginPath();
+c.arc(cx + 45, cy - 30, 25, 0, Math.PI*2); c.fill(); c.beginPath(); c.arc(cx, cy - 10, 48, Math.PI, 0); c.fill();}
+}
+function exitFashion() {
+document.getElementById('scr-fashion').classList.remove('active');
+saveFashionToPlayer();
+exitGame();
+}
+function saveFashionToPlayer() {
+player.color = fashionCurrent.shirt;
+player.pantsColor = fashionCurrent.pants;
+player.hair = fashionCurrent.hairColor;
+player.hairStyle = fashionCurrent.hairStyle;
+player.blush = fashionCurrent.blush;
+player.lipstick = fashionCurrent.lipstick;
+player.eyeshadow = fashionCurrent.eyeshadow;
+}
+function runFashionShow() {
+saveFashionToPlayer();
+document.getElementById('scr-fashion').classList.remove('active');
+state = 'FASHION_SHOW';
+player.x = 0;
+player.y = 450;
+showTimer = 0;
+}
+function updateFashionShow() {
+ctx.fillStyle = "#111"; ctx.fillRect(0,0,900,600);
+ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+ctx.beginPath(); ctx.moveTo(450, 0); ctx.lineTo(350, 600); ctx.lineTo(550, 600); ctx.fill();
+ctx.fillStyle = "#c0392b"; ctx.fillRect(0, 500, 900, 100);
+if(Math.random() < 0.1) { ctx.fillStyle = "white"; ctx.fillRect(Math.random()*900, Math.random()*500, 10, 10); }
+for(let i=0; i<900; i+=30) { ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(i, 600, 15, 0, Math.PI*2); ctx.fill();}
+if(player.x < 450) {
+player.x += 4;
+let bounce = Math.sin(player.x / 10) * 5;
+drawPlayer(player.x, player.y + bounce);
+} else {
+drawPlayer(player.x, player.y);
+showTimer++;
+if(showTimer === 60) {
+let score = Math.floor(Math.random() * 3) + 8; // 8-10
+let bonus = score * 10;
+alert("השופטים נותנים ציון: " + score + "/10!\nקיבלת " + bonus + "$");
+stats.money += bonus;
+updateHUD();
+state = 'PALACE';
+player.x = 580; player.y = 450;
+document.getElementById('game-info-box').style.display = 'none';
+}
+}
+}
+// ================= חדר הציור המשופר =================
+function initPaint() {
+showGameInfo("חדר הציור<br>צייר מה שבא לך<br>השתמש בכלים!");
+paintCtx.fillStyle = "white";
+paintCtx.fillRect(0, 0, paintSurface.width, paintSurface.height);
+paintColor = 'black';
+paintSize = 5;
+document.getElementById('brushSize').value = 5;
+document.getElementById('brushSizeVal').innerText = 5;
+paintHistory = [];
+historyStep = -1;
+savePaintState();
+}
+function savePaintState() {
+if (historyStep < paintHistory.length - 1) { paintHistory = paintHistory.slice(0, historyStep + 1); }
+paintHistory.push(paintCtx.getImageData(0, 0, paintSurface.width, paintSurface.height));
+historyStep++;
+if (paintHistory.length > 20) { paintHistory.shift(); historyStep--; }
+}
+function undoPaint() {
+if (historyStep > 0) {
+historyStep--;
+paintCtx.putImageData(paintHistory[historyStep], 0, 0);
+}
+}
+function redoPaint() {
+if (historyStep < paintHistory.length - 1) {
+historyStep++;
+paintCtx.putImageData(paintHistory[historyStep], 0, 0);
+}
+}
+function updateBrushSize(val) {
+paintSize = val;
+document.getElementById('brushSizeVal').innerText = val;
+}
+function updatePaint() {
+ctx.fillStyle = "#5d4037"; ctx.fillRect(0, 0, 900, 600);
+ctx.fillStyle = "#d7ccc8"; ctx.fillRect(140, 90, 620, 420);
+ctx.drawImage(paintSurface, 150, 100);
+ctx.lineWidth = 5; ctx.strokeStyle = "#3e2723"; ctx.strokeRect(150, 100, 600, 400);
+ctx.fillStyle = "white"; ctx.font = "20px Arial"; ctx.fillText("השתמש בעכבר כדי לצייר", 450, 50);
+}
+function setPaintColor(c) { paintColor = c; }
+function loadTemplate(type) {
+paintCtx.fillStyle = "white";
+paintCtx.fillRect(0, 0, paintSurface.width, paintSurface.height);
+paintCtx.strokeStyle = "black";
+paintCtx.lineWidth = 3;
+paintCtx.lineCap = "round";
+paintCtx.lineJoin = "round";
+paintCtx.beginPath();
+if (type === 'flower') {
+let cx = 300, cy = 250;
+paintCtx.moveTo(cx, cy+100); paintCtx.quadraticCurveTo(cx+20, cy+50, cx, cy);
+paintCtx.moveTo(cx, cy+50); paintCtx.quadraticCurveTo(cx+40, cy+40, cx+50, cy+20);
+paintCtx.moveTo(cx, cy+50); paintCtx.quadraticCurveTo(cx+20, cy+60, cx+50, cy+20);
+for(let i=0; i<6; i++) {
+let angle = (i * 60) * Math.PI / 180;
+paintCtx.moveTo(cx, cy);
+paintCtx.bezierCurveTo(cx + Math.cos(angle - 0.2) * 60, cy + Math.sin(angle - 0.2) * 60, cx + Math.cos(angle + 0.2) * 60, cy + Math.sin(angle + 0.2) * 60, cx, cy);
+}
+paintCtx.moveTo(cx+10, cy); paintCtx.arc(cx, cy, 10, 0, Math.PI*2);
+paintCtx.stroke();
+}
+else if (type === 'heart') {
+let cx = 300, cy = 200;
+paintCtx.moveTo(cx, cy + 30);
+paintCtx.bezierCurveTo(cx, cy, cx - 40, cy - 20, cx - 40, cy + 20);
+paintCtx.bezierCurveTo(cx - 40, cy + 50, cx, cy + 80, cx, cy + 100);
+paintCtx.bezierCurveTo(cx, cy + 80, cx + 40, cy + 50, cx + 40, cy + 20);
+paintCtx.bezierCurveTo(cx + 40, cy - 20, cx, cy, cx, cy + 30);
+paintCtx.stroke();
+}
+else if (type === 'star') {
+let cx = 300, cy = 200, outerRadius = 60, innerRadius = 25;
+let rot = Math.PI / 2 * 3; let x = cx, y = cy;
+let step = Math.PI / 5;
+paintCtx.moveTo(cx, cy - outerRadius);
+for (let i = 0; i < 5; i++) {
+x = cx + Math.cos(rot) * outerRadius; y = cy + Math.sin(rot) * outerRadius; paintCtx.lineTo(x, y); rot += step;
+x = cx + Math.cos(rot) * innerRadius; y = cy + Math.sin(rot) * innerRadius; paintCtx.lineTo(x, y); rot += step;
+}
+paintCtx.lineTo(cx, cy - outerRadius); paintCtx.stroke();
+}
+else if (type === 'house') {
+paintCtx.strokeRect(200, 200, 200, 150);
+paintCtx.moveTo(180, 200); paintCtx.lineTo(300, 100); paintCtx.lineTo(420, 200);
+paintCtx.strokeRect(280, 280, 40, 70);
+paintCtx.strokeRect(230, 230, 40, 40);
+paintCtx.strokeRect(330, 230, 40, 40);
+paintCtx.stroke();
+}
+savePaintState();
+}
+// ================= בוסים =================
+function initBoss() {
+boss = { x: 800, y: 300, hp: 500, maxHp: 500, level: 1, dir: 1 };
+bossPlayerHP = 500;
+player.x = 100; player.y = 300;
+gameTimer = 180;
+projectiles = [];
+showGameInfo("קרב בוסים<br>היזהר מהיריות!<br>פגיעה = -50 חיים");
+}
+function updateBoss() {
+ctx.fillStyle = "#111"; ctx.fillRect(0,0,900,600);
+if (keys['ArrowUp']) player.y -= 5; if (keys['ArrowDown']) player.y += 5;
+if (keys['ArrowLeft']) player.x -= 5; if (keys['ArrowRight']) player.x += 5;
+if (keys['Space'] && !enterCooldown) {
+projectiles.push({x: player.x, y: player.y, vx: 15, vy: 0, owner: 'player'});
+enterCooldown = true; setTimeout(() => enterCooldown = false, 200);
+}
+boss.y += 3 * boss.dir; if (boss.y < 50 || boss.y > 550) boss.dir *= -1;
+if (Math.random() < 0.05) projectiles.push({ x: boss.x, y: boss.y, vx: -10, vy: (Math.random()-0.5)*5, owner: 'boss' });
+ctx.fillStyle = "cyan"; ctx.beginPath(); ctx.moveTo(player.x+20, player.y); ctx.lineTo(player.x-10, player.y-10); ctx.lineTo(player.x-10, player.y+10); ctx.fill();
+ctx.fillStyle = "red"; ctx.beginPath(); ctx.arc(boss.x, boss.y, 50, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = "green"; ctx.fillRect(boss.x - 50, boss.y - 70, 100 * (boss.hp / boss.maxHp), 10);
+ctx.fillStyle = "blue"; ctx.fillRect(20, 20, 200 * (bossPlayerHP / 500), 20);
+ctx.fillStyle = "white"; ctx.fillText(`חיים: ${bossPlayerHP}`, 250, 40);
+gameTimer -= 1/60;
+ctx.fillText(`זמן: ${Math.ceil(gameTimer)}`, 400, 40);
+for (let i = 0; i < projectiles.length; i++) {
+let p = projectiles[i];
+p.x += p.vx; p.y += p.vy;
+ctx.fillStyle = p.owner === 'player' ? "yellow" : "orange";
+ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fill();
+if (p.owner === 'player' && Math.hypot(p.x - boss.x, p.y - boss.y) < 50) {
+boss.hp -= 10; projectiles.splice(i, 1); i--;
+if (boss.hp <= 0) { notify("ניצחת!");stats.money += 100; updateHUD(); exitGame(); }
+}
+else if (p.owner === 'boss' && Math.hypot(p.x - player.x, p.y - player.y) < 30) {
+notify("נפגעת! -50");
+bossPlayerHP -= 50;
+projectiles.splice(i, 1); i--;
+if (bossPlayerHP <= 0) { alert("נפסלת!");exitGame(); }
+}
+}
+if (gameTimer <= 0) { alert("נגמר הזמן!"); exitGame(); }
+}
+
+// ================= מערכת הטריוויה המשודרגת =================
+
+// בנק שאלות ידע כללי
+const generalQuestions = [
+{q: "מה צבע השמיים ביום בהיר?", a: ["כחול", "ירוק", "אדום"], c: 0, diff: 1},
+{q: "כמה רגליים יש לכלב?", a: ["2", "4", "6"], c: 1, diff: 1},
+{q: "איזה פרי הוא צהוב ומעוקל?", a: ["תפוח", "בננה", "אגס"], c: 1, diff: 1},
+{q: "בירת צרפת?", a: ["לונדון", "פריז", "ברלין"], c: 1, diff: 2},
+{q: "החיה הכי גבוהה ביבשה?", a: ["פיל", "ג'ירפה", "אריה"], c: 1, diff: 2},
+{q: "כמה ימים יש בשבוע?", a: ["5", "7", "10"], c: 1, diff: 1},
+{q: "הכוכב הקרוב לכדור הארץ?", a: ["השמש", "מאדים", "צדק"], c: 0, diff: 2},
+{q: "מי כתב את הארי פוטר?", a: ["ג'יי קיי רולינג", "טולקין", "דריוס"], c: 0, diff: 2},
+{q: "יבשת באנגלית?", a: ["Continent", "Country", "City"], c: 0, diff: 3},
+{q: "מים קופאים בטמפרטורה של?", a: ["100 מעלות", "0 מעלות", "-10 מעלות"], c: 1, diff: 2},
+{q: "מהו היונק הגדול בעולם?", a: ["לוויתן כחול", "פיל", "כריש"], c: 0, diff: 3},
+{q: "עיר הבירה של יפן?", a: ["בייג'ינג", "טוקיו", "סיאול"], c: 1, diff: 2},
+{q: "כמה יבשות יש בעולם (בשיטה המקובלת)?", a: ["5", "7", "9"], c: 1, diff: 3},
+{q: "איזה גז אנחנו נושמים כדי לחיות?", a: ["חמצן", "פחמן", "הליום"], c: 0, diff: 2},
+{q: "מי היה ראש הממשלה הראשון של ישראל?", a: ["רבין", "בן גוריון", "בגין"], c: 1, diff: 3}
+];
+function generateMathQuestion(difficulty) {
+let n1, n2, op, ans;
+if (difficulty === 1) { // חיבור חיסור עד 20
+n1 = Math.floor(Math.random() * 20) + 1;
+n2 = Math.floor(Math.random() * 10) + 1;
+op = Math.random() > 0.5 ? '+' : '-';
+if (op === '-') { if(n1 < n2) { let t=n1; n1=n2; n2=t; } }
+ans = op === '+' ? n1 + n2 : n1 - n2;
+} else if (difficulty === 2) { // כפל עד 10, חיבור עד 100
+if (Math.random() > 0.5) {
+n1 = Math.floor(Math.random() * 10) + 1;
+n2 = Math.floor(Math.random() * 10) + 1;
+op = '*';
+ans = n1 * n2;
+} else {
+n1 = Math.floor(Math.random() * 50) + 20;
+n2 = Math.floor(Math.random() * 50) + 20;
+op = '+';
+ans = n1 + n2;
+}
+} else { // כפל קשה, חילוק, חיסור גדול
+let type = Math.random();
+if (type < 0.33) {
+n1 = Math.floor(Math.random() * 15) + 5;
+n2 = Math.floor(Math.random() * 10) + 2;
+op = '*';
+ans = n1 * n2;
+} else if (type < 0.66) {
+n2 = Math.floor(Math.random() * 9) + 2;
+ans = Math.floor(Math.random() * 10) + 2;
+n1 = n2 * ans;
+op = '/';
+} else {
+n1 = Math.floor(Math.random() * 200) + 50;
+n2 = Math.floor(Math.random() * 100) + 10;
+op = '-';
+ans = n1 - n2;
+}
+}
+
+let answers = [ans, ans + Math.floor(Math.random()*5)+1, ans - Math.floor(Math.random()*5)-1];
+answers.sort(() => Math.random() - 0.5);
+
+return {
+q: `${n1} ${op} ${n2} = ?`,
+a: answers.map(String),
+c: answers.indexOf(ans)
+};
+}
+function openTrivia() {
+if (Date.now() < triviaLockoutTime) {
+let minsLeft = Math.ceil((triviaLockoutTime - Date.now()) / 60000);
+alert(`נכשלת בפעם הקודמת! החדר נעול לעוד ${minsLeft} דקות.`);
+return;
+}
+triviaStreak = 0;
+document.getElementById('modal-trivia').style.display = 'flex';
+loadNextTriviaQuestion();
+}
+function loadNextTriviaQuestion() {
+document.getElementById('triv-streak').innerText = triviaStreak;
+
+let difficulty = 1;
+if (triviaStreak >= 3) difficulty = 2;
+if (triviaStreak >= 6) difficulty = 3;
+let qObj;
+if (Math.random() > 0.5) {
+qObj = generateMathQuestion(difficulty);
+} else {
+let relevant = generalQuestions.filter(q => q.diff === difficulty);
+if(relevant.length === 0) relevant = generalQuestions;
+qObj = relevant[Math.floor(Math.random() * relevant.length)];
+}
+document.getElementById('triv-q').innerText = qObj.q;
+let div = document.getElementById('triv-ans');
+div.innerHTML = '';
+
+qObj.a.forEach((ansText, idx) => {
+let b = document.createElement('button');
+b.className = 'trivia-btn';
+b.innerText = ansText;
+b.onclick = () => handleTriviaAnswer(idx === qObj.c);
+div.appendChild(b);
+});
+}
+function handleTriviaAnswer(isCorrect) {
+if (isCorrect) {
+triviaStreak++;
+notify("נכון!");
+if (triviaStreak >= 8) {
+alert("כל הכבוד! ענית על 8 שאלות ברצף!\nעלית בדרגה!");
+player.rank++;
+stats.money += 300;
+updateHUD();
+closeTrivia();
+} else {
+loadNextTriviaQuestion();
+}
+} else {
+triviaLockoutTime = Date.now() + 30 * 60 * 1000;
+alert("תשובה שגויה! החדר ננעל לחצי שעה.");
+closeTrivia();
+}
+}
+function closeTrivia() { document.getElementById('modal-trivia').style.display = 'none'; }
+// --- כלים ---
+function updateHUD() {
+document.getElementById('ui-mon').innerText = stats.money;
+document.getElementById('ui-tro').innerText = stats.trophies; // תוקן מ-pts ל-tro
+document.getElementById('ui-rank').innerText = player.rank;
+document.getElementById('ui-rank-name').innerText = getRankName(player.rank);
+}
+
+// עדכון פונקציית ההודעות (notify) כדי לתמוך בזמן מותאם אישית
+let toastTimeout;
+function notify(msg, duration = 3000) { 
+    let el = document.getElementById('toast'); 
+    el.innerText = msg; 
+    el.style.display = 'block'; 
+    
+    // אם כבר יש טיימר פעיל, נבטל אותו כדי למנוע התנגשויות
+    if (toastTimeout) clearTimeout(toastTimeout);
+    
+    toastTimeout = setTimeout(() => {
+        el.style.display='none';
+    }, duration); 
+}
+
+function sendChat() { let inp = document.getElementById('chat-input'); let b = document.getElementById('chat-bubble'); b.innerText = inp.value; b.style.display = 'block';
+b.style.left = (player.x + 20) + 'px'; b.style.top = (player.y - 30) + 'px'; inp.value = '';
+setTimeout(() => b.style.display='none', 3000); }
+</script>
+</body>
+</html>
